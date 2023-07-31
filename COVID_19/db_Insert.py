@@ -19,7 +19,7 @@ properties = {
     'driver': 'oracle.jdbc.driver.OracleDriver'
 }
 
-#DB에 인서트
+#DB에 인서트asdf
 for date_prefix, url_list in dl.url_groups.items():
     table_name = f'COVID_19_{date_prefix}'  #테이블 이름 지정
 

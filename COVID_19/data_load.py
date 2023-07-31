@@ -20,10 +20,10 @@ spark_conf = SparkConf().setAll([
     , ('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
     , ('spark.hadoop.home', 'C:/hadoop/hadoop2/hadoop-3.2.4')
     #메모리 관리 문제 해결중...
-    , ('spark.executor.memory', '8g')
-    , ('spark.executor.memoryOverhead', '2g')
-    , ('spark.driver.memory', '4g')
-    , ('spark.driver.extraJavaOptions', '-Xss4m')
+    # , ('spark.executor.memory', '8g')
+    # , ('spark.executor.memoryOverhead', '2g')
+    # , ('spark.driver.memory', '4g')
+    # , ('spark.driver.extraJavaOptions', '-Xss4m')
 ])
 
 spark = (

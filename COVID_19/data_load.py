@@ -201,7 +201,7 @@ def create_final_df(input_s3_covid_path, path):
 
     return df_final_country
 
-# #데이터프레임 생성
+# #하나의 데이터프레임에 모아서 생성
 # df = create_final_df(input_s3_covid_path, file_paths)
 # # df_final_country = create_country_Flag(country_path)
 

@@ -1,3 +1,8 @@
+'''
+https://www.arcgis.com/apps/dashboards/bda7594740fd40299423467b48e9ecf6 세계 코로나 현황 대시보드
+오른쪽 상단 메뉴 --> raw data --> 존스 홉킨스 대학교 시스템 과학 및 엔지니어링 센터(CSSE)깃허브 주소
+존스 홉킨스 대학교 시스템 과학 및 엔지니어링 센터(CSSE)깃허브 주소 https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/
+'''
 import requests
 import boto3
 ######################################## 깃허브에서 s3로 업로드 #######################################################
@@ -88,9 +93,6 @@ def from_git_to_s3_load_all(bucket_name, folder, response):
 
     return uploaded_file_count
 
-
-
-#존스 홉킨스 대학교 시스템 과학 및 엔지니어링 센터(CSSE)깃허브 주소 https://github.com/CSSEGISandData/COVID-19/tree/master/csse_covid_19_data/
 #해당 파일이 메인프로그램인지 모듈(import 되어 사용되는)인지 구분하기 위한 코드
 #if __name__  =  =  '__main__': 이하 코드는 현재 스크립트가 다른 곳에서 import되어 사용될 경우 실행하지 않을 코드임
 if __name__ == '__main__': 

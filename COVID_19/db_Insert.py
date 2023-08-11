@@ -5,9 +5,8 @@ from pyspark.sql import SparkSession
 
 
 spark = (
-    SparkSession.builder.appName('Insert Oracle') #spark UI에 표시되는 이름
-    # .config('spark.jars', 'file:///c:/spark/spark-3.4.1-bin-hadoop3/jars/ojdbc11.jar') #오라클 드라이버 위치
-    .config('spark.jars', 'COVID_19/spark-3.4.1-bin-hadoop3/jars/ojdbc11.jar') #오라클 드라이버 위치
+     SparkSession.builder.appName('Insert Oracle') #spark UI에 표시되는 이름
+    .config('spark.jars', 'file:///c:/spark/spark-3.4.1-bin-hadoop3/jars/ojdbc11.jar') #오라클 드라이버 위치
     .getOrCreate()
 )
 

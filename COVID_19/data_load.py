@@ -14,9 +14,9 @@ input_s3_iso_path = f's3a://{ul.bucket_name}/{ul.iso_folder_name}/'
 output_local_file_path = 'C:/Users/dhqhf/vscode-workspace/ToyProj/COVID_19/output/'
 
 spark_conf = SparkConf().setAll([
-      ('spark.hadoop.fs.s3a.access.key', ul.AWS_ACCESS_KEY_ID)
-    , ('spark.hadoop.fs.s3a.secret.key', ul.AWS_SECRET_ACCESS_KEY)
-    , ('spark.hadoop.fs.s3a.endpoint', f's3.{ul.AWS_REGION}.amazonaws.com')
+      ('spark.hadoop.fs.s3a.access.key', ul.aws_access_key_id)
+    , ('spark.hadoop.fs.s3a.secret.key', ul.aws_secret_access_key)
+    , ('spark.hadoop.fs.s3a.endpoint', f's3.{ul.region_name}.amazonaws.com')
     , ('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
     , ('spark.hadoop.home', 'C:/hadoop/hadoop2/hadoop-3.2.4')
     #메모리 관리 문제 해결중...
@@ -27,7 +27,7 @@ spark_conf = SparkConf().setAll([
 ])
 
 spark = (
-        SparkSession.builder
+         SparkSession.builder
         .appName('Learning_Spark')
         .config(conf = spark_conf)
         .getOrCreate()
@@ -42,7 +42,7 @@ json_schema = StructType([
 json_data = spark.read.option('multiline', 'true').schema(json_schema).json(f'{input_s3_covid_path}country_convert.json')
 
 file_paths = (
-            spark.sparkContext.binaryFiles(f's3a://{ul.bucket_name}/{ul.covid_folder_name}')
+             spark.sparkContext.binaryFiles(f's3a://{ul.bucket_name}/{ul.covid_folder_name}')
             .keys()
             .collect()
         )
@@ -77,6 +77,7 @@ def rename_columns(df):
         fileName = f'{yyyy}/{mm}/{dd}' 
 
         renamed_columns.append(fileName) #빈 리스트에 추가
+        
     renamed_columns.insert(0, df.columns[0]) #첫번째 컬럼에 'Country_Region' 추가
     
     # #기존 컬럼명과 'yyyy/mm/dd'형태로 만든 컬럼명을 묶어서(zip) 새로운 컬럼명으로 수정(withColumnRenamed) --> 스택 오버 플로우 가능성 있음 

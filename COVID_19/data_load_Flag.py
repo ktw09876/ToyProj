@@ -227,9 +227,6 @@ if __name__ == '__main__':
         # 데이터 가공
         df = create_final_df(input_s3_covid_path, url_list)
 
-        #국가 정보 불러오기 'Country_Region'컬럼 생성
-        # df_final_country = create_country_Flag(country_path)
-
         #파티션 수 늘리기
         df_final_country = df.repartition(10) #셔플 사용, 파티션을 늘리거나 줄이거나 할 수 있음
 

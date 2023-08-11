@@ -57,6 +57,14 @@ for url in file_paths:
             url_groups[date] = []  
         url_groups[date].append(url) 
 
+# #국기 이미지를 가져오기 위한 .csv파일
+# country_path = spark.read.csv(
+#           input_s3_iso_path + 'UID_ISO_FIPS_LookUp_Table.csv'
+#         , header = True          
+#         , encoding = 'utf-8'      
+#         , inferSchema = True     
+#     )
+
 #컬럼명을 내가 원하는 날짜형태로 수정하는 함수
 def rename_columns(df):
     renamed_columns = []
@@ -153,6 +161,46 @@ def create_final_df(input_s3_covid_path, path):
     result_df = rename_columns(df)
     
     return result_df
+
+#국가별 국기 이미지 생성
+# def create_country_Flag(path):
+    #iso == 'NA'인 국가 'Namibia'확인
+    # country_info.filter(country_info['Country_Region'] == 'Namibia').show()
+
+    #국가 정보 파일에서 필요한 컬럼만 가져온다
+    country_info = path[['iso2', 'Country_Region']]
+    country_info = country_info.dropDuplicates(subset = ['Country_Region'])#Country_Region컬럼을 기준으로 첫 행만 남기고 중복 제거
+    # country_info.show(5)
+
+    #daily_report정보와 국가 정보를 합친다
+    df_final_country = df.join(country_info, how = 'left', on = 'Country_Region')
+
+    #혹시 iso2값이 없는 경우가 있나?
+    # print(f''iso2'컬럼이 없는 행은 {df_final_country.count()} - {df_final_country.filter(col('iso2').isNotNull()).count()}개 입니다')
+    result_df = df_final_country.dropna(subset = ['iso2']) #'iso2'의 값이 없는 행 삭제
+
+    #이미지 생성
+    def create_flag_link(iso2):
+        if iso2 == 'AS':
+            iso2 = 'US'
+        iso2 = iso2.lower()
+        flag_link = f'https://public.flourish.studio/country-flags/svg/{iso2}.svg'
+        return flag_link
+
+    # Register the UDF with Spark
+    create_flag_link_udf = udf(create_flag_link, StringType())
+
+    # Register the UDF with Spark
+    df_final_country = result_df.withColumn('iso2', create_flag_link_udf('iso2'))
+    # df_final_country.show(5)
+
+    col_list = df_final_country.columns
+    col_list.remove('iso2')
+    col_list.insert(1, 'iso2')
+    df_final_country = df_final_country.select(*col_list) #select(모든 컬럼리스트)
+    df_final_country = df_final_country.withColumnRenamed('iso2', 'Country_Flag')
+
+    return df_final_country
 
 # #하나의 데이터프레임에 모아서 생성
 # df = create_final_df(input_s3_covid_path, file_paths)

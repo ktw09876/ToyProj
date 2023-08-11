@@ -19,4 +19,4 @@ class DBInsertTask(luigi.Task):
         # Call the necessary functions or logic from db_Insert.py
 
 if __name__ == '__main__':
-    luigi.build([DBInsertTask()], local_scheduler=True)
+    luigi.run()

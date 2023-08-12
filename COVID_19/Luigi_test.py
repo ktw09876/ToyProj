@@ -19,15 +19,13 @@ class S3_Upload(luigi.Task):
             print('실패, covid파일을 가져오지 못 했습니다.')
 
 
-
-
-
-
 class DataLoad(luigi.Task):
     def requires(self):
+        print('S3_Upload실행 완료')
         return S3_Upload()
     
     def run(self):
+        print('DataLoad시작')
         #월별로 데이터를 가공 후 다른 폴더에 각각 저장
         for date_prefix, url_list in dl.url_groups.items():
             # 데이터 가공
@@ -39,7 +37,7 @@ class DataLoad(luigi.Task):
             #결과 데이터프레임을 저장
             output_folder_path = f'{dl.output_local_file_path}{date_prefix}' #메모리 관리 문제 해결중...coalesce(1) #강제가 아닌 이상 셔플 사용X, 파티션을 줄이기만 가능
             (
-                df_final_country
+                 df_final_country
                 .coalesce(1)
                 .write
                 .format('parquet')
@@ -82,4 +80,3 @@ class DBInsertTask(luigi.Task):
 if __name__ == '__main__':
     tasks_to_run = [S3_Upload(), DataLoad(), DBInsertTask()]
     luigi.build(tasks_to_run, local_scheduler=True)
-    

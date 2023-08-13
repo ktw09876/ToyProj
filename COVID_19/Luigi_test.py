@@ -19,10 +19,6 @@ timestamp = datetime.now().strftime(timestamp_format)
 #s3_upload.py
 class s3_upload(luigi.Task):
 
-    #결과 파일 생성
-    def output(self):
-        return luigi.LocalTarget(f'{result_path}s3_upload/upload_result_{timestamp}.txt') #결과 파일 날짜별로 확인
-    
     def run(self):   
         print("s3_upload 시작")
         if ul.response_iso.status_code == 200: #성공, 서버가 요청에 응답함
@@ -46,14 +42,15 @@ class s3_upload(luigi.Task):
 
         print("s3_upload 실행 완료")
 
+    #결과 파일 생성
+    def output(self):
+        return luigi.LocalTarget(f'{result_path}s3_upload/upload_result_{timestamp}.txt') #결과 파일 날짜별로 확인
+    
+
 #data_load.py
 class DataLoad(luigi.Task):
     def requires(self): #의존성 설정 
         return s3_upload() #s3_upload()가 실행되어야지만 DataLoad()가 실행된다
-
-    #결과 파일 생성
-    def output(self):
-        return luigi.LocalTarget(f'{result_path}DataLoad/data_result_{timestamp}.txt') #결과 파일 날짜별로 확인
 
     def run(self):
         print('DataLoad 시작')
@@ -85,17 +82,18 @@ class DataLoad(luigi.Task):
 
         print('DataLoad 실행 완료')
 
+
+    #결과 파일 생성
+    def output(self):
+        return luigi.LocalTarget(f'{result_path}DataLoad/data_result_{timestamp}.txt') #결과 파일 날짜별로 확인
+
+
 #db_Insert.py
 class DBInsert(luigi.Task): 
     def requires(self): #의존성 설정 
         return DataLoad() #DataLoad()가 실행되어야지만 DBInsert()가 실행된다
     
-    #결과 파일 생성
-    def output(self):
-        return luigi.LocalTarget(f'{result_path}DBInsert/insert_result_{timestamp}.txt') #결과 파일 날짜별로 확인
-
     def run(self):
-
         #DB에 인서트
         for date_prefix, url_list in dl.url_groups.items():
             table_name = f'COVID_19_{date_prefix}'  #테이블 이름 지정
@@ -121,8 +119,12 @@ class DBInsert(luigi.Task):
             for word in words:
                 f.write('{word}\n'.format(word = word))
 
-if __name__ == '__main__':
+    #결과 파일 생성
+    def output(self):
+        return luigi.LocalTarget(f'{result_path}DBInsert/insert_result_{timestamp}.txt') #결과 파일 날짜별로 확인
 
+
+if __name__ == '__main__':
     # luigi.run([ 'DBInsert', '--local-scheduler' ])#단일작업을 실행할 때 여러 작업을 실행할 때는 luigi.build() - 여러 작업을 동시에 실행할 수 있다
     luigi.build(
               [DBInsert()] #실행시킬 작업

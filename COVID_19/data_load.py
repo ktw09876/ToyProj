@@ -5,7 +5,6 @@ findspark.init()
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
-from pyspark.sql.functions import udf
 ################################### s3 데이터를 읽고 가공 후 저장 #######################################################
 
 
@@ -47,7 +46,7 @@ file_paths = (
             .collect()
         )
 
-#월별 daily_repoty url을 리스트로 가져옴 .endswith('.csv')
+#월별 daily_repoty url을 리스트로 가져옴
 url_groups  = {}
 for url in file_paths:
     if url.endswith('.csv'):

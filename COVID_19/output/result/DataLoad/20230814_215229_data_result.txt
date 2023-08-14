@@ -1,0 +1,1 @@
+20230814_215229_path = C:/Users/dhqhf/vscode-workspace/ToyProj/COVID_19/output/01 Save Result File Successful

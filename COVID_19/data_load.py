@@ -188,7 +188,7 @@ if __name__ == '__main__':
             .coalesce(1)
             .write
             .format('parquet')
-            .mode("overwrite")
+            .mode('overwrite')
             .save(output_folder_path) 
         )
         print(f'경로: {output_local_file_path}{date_prefix} 결과 파일 저장 성공')

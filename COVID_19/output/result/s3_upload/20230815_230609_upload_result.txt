@@ -1,0 +1,1 @@
+upload iso = 0/upload covid = 0

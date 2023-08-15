@@ -46,12 +46,15 @@ file_paths = (
             .collect()
         )
 
+
+
 #월별 daily_repoty url을 리스트로 가져옴
 url_groups  = {}
 for url in file_paths:
     if url.endswith('.csv'):
-        date_start_index = url.rfind('/') + 1 
+        date_start_index = url.rfind('/') + 1 #오른쪽부터 '/'를 찾아서 +1한 인덱스
         date = url[date_start_index:date_start_index + 2] 
+        # print(date)
         if date not in url_groups:
             url_groups[date] = []  
         url_groups[date].append(url) 

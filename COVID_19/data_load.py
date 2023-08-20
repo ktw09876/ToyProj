@@ -10,7 +10,7 @@ from pyspark.sql.types import StructType, StructField, StringType
 
 input_s3_covid_path = f's3a://{ul.bucket_name}/{ul.covid_folder_name}/'
 input_s3_iso_path = f's3a://{ul.bucket_name}/{ul.iso_folder_name}/'
-output_local_file_path = 'C:/Users/dhqhf/vscode-workspace/ToyProj/COVID_19/output/'
+output_local_file_path = 'output/'
 
 spark_conf = SparkConf().setAll([
       ('spark.hadoop.fs.s3a.access.key', ul.aws_access_key_id)
@@ -75,15 +75,15 @@ def rename_columns(df):
     renamed_columns.insert(0, df.columns[0]) #첫번째 컬럼에 'Country_Region' 추가
     
     # #기존 컬럼명과 'yyyy/mm/dd'형태로 만든 컬럼명을 묶어서(zip) 새로운 컬럼명으로 수정(withColumnRenamed) --> 스택 오버 플로우 가능성 있음 
-    # for old_name, new_name in zip(df.columns, renamed_columns):
-    #     df = df.withColumnRenamed(old_name, new_name)
+    for old_name, new_name in zip(df.columns, renamed_columns):
+        df = df.withColumnRenamed(old_name, new_name)
     
-    #다른 방법
-    df = df.selectExpr(*[f"`{col_name}` as `{new_name}`" for col_name, new_name in zip(df.columns, renamed_columns)])
+    # #다른 방법
+    # df = df.selectExpr(*[f"'{col_name}' as '{new_name}'" for col_name, new_name in zip(df.columns, renamed_columns)])
 
     #컬럼명을 날짜별로 정렬
     df_sorted = df.select('Country_Region', *sorted(df.columns[1:]))
-
+    
     return df_sorted
 
 #각각의 .csv파일의 컬럼명'Country/Region'를 'Country_Region'로 수정, 'Confirmed'에 값이 없는 행 삭제

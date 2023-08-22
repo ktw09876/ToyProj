@@ -7,17 +7,12 @@ from pyspark.sql import SparkSession
 from pyspark.sql.types import StructType, StructField, StringType
 ################################### s3 데이터를 읽고 가공 후 저장 #######################################################
 
-
-input_s3_covid_path = f's3a://{ul.bucket_name}/{ul.covid_folder_name}/'
-input_s3_iso_path = f's3a://{ul.bucket_name}/{ul.iso_folder_name}/'
-output_local_file_path = 'output/'
-
 spark_conf = SparkConf().setAll([
       ('spark.hadoop.fs.s3a.access.key', ul.aws_access_key_id)
     , ('spark.hadoop.fs.s3a.secret.key', ul.aws_secret_access_key)
     , ('spark.hadoop.fs.s3a.endpoint', f's3.{ul.region_name}.amazonaws.com')
-    , ('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')
-    , ('spark.hadoop.home', 'C:/hadoop/hadoop2/hadoop-3.2.4')
+    , ('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem') #s3 파일 시스템 구현
+    , ('spark.hadoop.home', 'C:/hadoop/hadoop2/hadoop-3.2.4') #hadoop 경로
     #메모리 관리 문제 해결중...
     # , ('spark.executor.memory', '8g')
     # , ('spark.executor.memoryOverhead', '2g')
@@ -25,13 +20,22 @@ spark_conf = SparkConf().setAll([
     # , ('spark.driver.extraJavaOptions', '-Xss4m')
 ])
 
+#SparkSession 생성
 spark = (
          SparkSession.builder
-        .appName('Learning_Spark')
+        .appName('Learning_Spark') #UI에 표현되는 이름
         .config(conf = spark_conf)
         .getOrCreate()
     )
 
+#불러올 s3 파일 경로
+input_s3_covid_path = f's3a://{ul.bucket_name}/{ul.covid_folder_name}/'
+input_s3_iso_path = f's3a://{ul.bucket_name}/{ul.iso_folder_name}/'
+
+#결과 파일을 저장할 로컬 경로
+output_local_file_path = 'output/'
+
+#json 파일 형식
 json_schema = StructType([
     StructField('Converted_Country', StringType(), True),
     StructField('json_Country_Region', StringType(), True),
@@ -40,6 +44,7 @@ json_schema = StructType([
 #json 파일 불러오기
 json_data = spark.read.option('multiline', 'true').schema(json_schema).json(f'{input_s3_covid_path}country_convert.json')
 
+# S3 버킷의 파일에 접근
 file_paths = (
              spark.sparkContext.binaryFiles(f's3a://{ul.bucket_name}/{ul.covid_folder_name}')
             .keys()
@@ -47,19 +52,7 @@ file_paths = (
         )
 
 
-
-#월별 daily_repoty url을 리스트로 가져옴
-url_groups  = {}
-for url in file_paths:
-    if url.endswith('.csv'):
-        date_start_index = url.rfind('/') + 1 #오른쪽부터 '/'를 찾아서 +1한 인덱스
-        date = url[date_start_index:date_start_index + 2] 
-        # print(date)
-        if date not in url_groups:
-            url_groups[date] = []  
-        url_groups[date].append(url) 
-
-#컬럼명을 내가 원하는 날짜형태로 수정하는 함수
+#데이터프레임을 전달 받아서 컬럼명을 날짜형태로 수정하는 함수
 def rename_columns(df):
     renamed_columns = []
 
@@ -175,6 +168,18 @@ def create_final_df(input_s3_covid_path, path):
 
 #해당 파일이 메인프로그램인지 모듈(import 되어 사용되는)인지 구분하기 위한 코드
 #if __name__  =  =  '__main__': 이하 코드는 현재 스크립트가 다른 곳에서 import되어 사용될 경우 실행하지 않을 코드임
+
+#월별 daily_repoty url을 리스트로 가져옴
+url_groups  = {}
+for url in file_paths:
+    if url.endswith('.csv'):
+        date_start_index = url.rfind('/') + 1 #오른쪽부터 '/'를 찾아서 +1한 인덱스
+        date = url[date_start_index:date_start_index + 2] 
+
+        if date not in url_groups:
+            url_groups[date] = []  
+        url_groups[date].append(url) 
+
 if __name__ == '__main__': 
     #월별로 데이터를 가공 후 다른 폴더에 각각 저장
     for date_prefix, url_list in url_groups.items():

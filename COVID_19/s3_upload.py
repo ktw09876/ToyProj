@@ -14,6 +14,12 @@ covid_folder_name = 'csse_covid_19_daily_reports' #버킷 내 coivd_폴더 이�
 iso_folder_name = 'csse_covid_19_daily_reports/iso' #버킷 내 국가정보_폴더 이름
 
 #base_url로 get요청을 보내고 그에 해당하는 응답을 반환함
+# 어떤 방식(method)의 HTTP 요청을 하느냐에 따라서 해당하는 이름의 함수를 사용하면 된다.
+
+# GET 방식: requests.get()
+# POST 방식: requests.post()
+# PUT 방식: requests.put()
+# DELETE 방식: requests.delete()
 response_covid = requests.get(base_url_covid) 
 response_iso = requests.get(base_url_iso) 
 
@@ -41,7 +47,7 @@ def upload_to_s3(bucket_name, path, csv_content):
             , Body = csv_content
         )
 
-#깃허브에 있는 모든 .csv파일을 가져오는 함수
+#버킷명, 폴더명, 상태코드를 받아서 깃허브에 있는 모든 .csv파일을 가져오는 함수
 def from_git_to_s3_load_all(bucket_name, folder, response):
     files = response.json() #응답 받은 결과를 json 형태로 가져옴
     uploaded_file_count = 0
@@ -53,6 +59,8 @@ def from_git_to_s3_load_all(bucket_name, folder, response):
             url = file_info['download_url'] #download_url의 값을 url 변수에 할당한다
             response = requests.get(url) #그렇게 얻은 url을 서버에 요청
 
+            # 200 (OK 코드)이 아닌 경우 에러 raise
+            # response.raise_for_status()
             if response.status_code == 200: #응답된 코드가 200이면
                 csv_content = response.content #.text보다 .content를 사용하는 게 인코딩 문제 방지에 좋다
                 file_name = url.split('/')[-1] #깃허브에서 가져올 파일 이름

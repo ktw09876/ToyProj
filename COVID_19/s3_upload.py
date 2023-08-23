@@ -18,8 +18,6 @@ iso_folder_name = 'csse_covid_19_daily_reports/iso' #버킷 내 국가정보_폴
 
 # GET 방식: requests.get()
 # POST 방식: requests.post()
-# PUT 방식: requests.put()
-# DELETE 방식: requests.delete()
 response_covid = requests.get(base_url_covid) 
 response_iso = requests.get(base_url_iso) 
 

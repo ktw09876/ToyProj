@@ -1,27 +1,52 @@
 import unittest
 from unittest.mock import Mock, patch
-from s3_upload import check_file, upload_to_s3, from_git_to_s3_load_all
+
+import s3_upload as ul
 
 
 class TestS3Upload(unittest.TestCase):
 
-    @patch('s3_upload.client.list_objects_v2')
-    def test_check_file(self, mock_list_objects_v2):
-        mock_list_objects_v2.return_value = {'Contents': [{'Key': 'test_file.csv'}]}
-        result = check_file('test_bucket', 'test_folder', 'test_file.csv')
+    @patch('s3_upload.requests.get')
+    @patch('s3_upload.boto3.client')
+    def test_upload_to_s3(self, mock_boto_client, mock_requests_get):
+        
+        mock_response = Mock() #테스트 객체 생성
+
+        mock_response.status_code = 200 #서버 응답 200 설정
+        mock_response.content = b'Test content' #csv_content = response.content
+        mock_requests_get.return_value = mock_response #HTTP 요청
+       
+        mock_s3_client = mock_boto_client.return_value
+        mock_s3_client.list_objects_v2.return_value = {
+                'Contents': []
+            }
+
+        
+        ul.upload_to_s3('test_bucket', 'test_path', b'Test content')
+        
+        mock_s3_client.put_object.assert_called_with(Bucket = 'test_bucket', Key = 'test_path', Body = b'Test content')
+
+    def test_check_file_exists(self):
+        mock_s3_client = Mock()
+        mock_s3_client.list_objects_v2.return_value = {
+                'Contents': [{
+                        'Key': 'test_path/test_file'
+                    }]
+            }
+
+        result = ul.check_file(mock_s3_client, 'test_path', 'test_file')
+
         self.assertTrue(result)
 
-    @patch('s3_upload.client.put_object')
-    def test_upload_to_s3(self, mock_put_object):
-        upload_to_s3('test_bucket', 'test_path', 'test_content')
-        mock_put_object.assert_called_once_with(Bucket='test_bucket', Key='test_path', Body='test_content')
+    def test_check_file_not_exists(self):
+        mock_s3_client = Mock()
+        mock_s3_client.list_objects_v2.return_value = {
+                'Contents': []
+            }
 
-    def test_from_git_to_s3_load_all(self):
-        
-        pass
+        result = ul.check_file(mock_s3_client, 'test_path', 'test_file')
 
-
-
+        self.assertFalse(result)
 
 if __name__ == '__main__':
-    unittest.main()
+    unittest.main(exit = False)

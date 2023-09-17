@@ -30,43 +30,6 @@ client = boto3.client(
     , region_name = region_name #버킷의 리전 코드(아시아 태평양(서울))
 )
 
-#구현중
-def process_files(bucket_name, folder, response):
-    files = response.json()
-    uploaded_file_count = 0
-
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        futures = []
-
-        for file_info in files:
-            if file_info['name'].endswith('Table.csv'):
-                url = file_info['download_url']
-                future = executor.submit(process_file, bucket_name, folder, url)
-                futures.append(future)
-
-        for future in concurrent.futures.as_completed(futures):
-            uploaded_file_count += future.result()
-
-    return uploaded_file_count
-
-#구현중
-def process_file(bucket_name, folder, url):
-    response = requests.get(url)
-    if response.status_code == 200:
-        csv_content = response.content
-        file_name = url.split('/')[-1]
-        path = f'{folder}/{file_name}'
-
-        if check_file(bucket_name, folder, file_name):
-            print(f'이미 있는 파일 입니다 경로: {bucket_name}/{folder}/, 파일명: {file_name}')
-        else:
-            upload_to_s3(bucket_name, path, csv_content)
-            print(f'업로드: s3://{bucket_name}/{path}')
-            return 1
-    else:
-        print(f'데이터를 가져오지 못 했습니다. 경로: {url}. Status code: {response.status_code}')
-        return 0
-
 #S3의 파일과 깃허브의 파일을 비교하는 함수
 def check_file(bucket, folder, file):
     response = client.list_objects_v2(
@@ -82,6 +45,47 @@ def upload_to_s3(bucket_name, path, csv_content):
             , Key = path #업로드할 파일의 경로
             , Body = csv_content
         )
+    
+#구현중
+def process_file(bucket_name, folder, url):
+    response = requests.get(url) #.csv url
+    if response.status_code == 200:
+        csv_content = response.content
+        file_name = url.split('/')[-1]
+        path = f'{folder}/{file_name}'
+
+        if check_file(bucket_name, folder, file_name):
+            print(f'이미 있는 파일 입니다 경로: {bucket_name}/{folder}/, 파일명: {file_name}')
+        else:
+            upload_to_s3(bucket_name, path, csv_content)
+            print(f'업로드: s3://{bucket_name}/{path}')
+
+            return 1
+    else:
+        print(f'데이터를 가져오지 못 했습니다. 경로: {url}. Status code: {response.status_code}')
+
+        return 0
+    
+#구현중
+def process_files(bucket_name, folder, response):
+    files = response.json()
+    uploaded_file_count = 0
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        futures = []
+
+        for file_info in files:
+            if file_info['name'].endswith('.csv'):
+            # elif file_info['name'].endswith('.csv'): #.csv 데이터 모두 수집
+            # elif file_info['name'].endswith('2022.csv'): #2022년 데이터 수집
+                url = file_info['download_url']
+                future = executor.submit(process_file, bucket_name, folder, url)
+                futures.append(future)
+
+        for future in concurrent.futures.as_completed(futures):
+            uploaded_file_count += future.result()
+
+    return uploaded_file_count
 
 #버킷명, 폴더명, 상태코드를 받아서 깃허브에 있는 모든 .csv파일을 가져오는 함수
 def from_git_to_s3_load_all(bucket_name, folder, response):
@@ -142,17 +146,19 @@ def from_git_to_s3_load_all(bucket_name, folder, response):
 #if __name__  =  =  '__main__': 이하 코드는 현재 스크립트가 다른 곳에서 import되어 사용될 경우 실행하지 않을 코드임
 if __name__ == '__main__': 
     
-    # 깃허브에 있는 iso파일을 aws S3에 저장
+    #깃허브에 있는 iso파일을 aws S3에 저장
     #더 빠르게 하는 방법 없나?
     if response_iso.status_code == 200: #성공, 서버가 요청에 응답함
         total_cnt = from_git_to_s3_load_all(bucket_name, iso_folder_name, response_iso) #깃허브의 iso파일을 업로드 할 때
+        # total_cnt = process_files(bucket_name, iso_folder_name, response_iso) #깃허브의 모든 covid파일을 업로드 할 때
         print(f'업로드한 파일은 총 {total_cnt}개 입니다')
     else:
         print('실패, iso파일을 가져오지 못 했습니다.')
 
     # 깃허브에 있는 covid파일을 aws S3에 저장
     if response_covid.status_code == 200: #성공, 서버가 요청에 응답함
-        total_cnt = from_git_to_s3_load_all(bucket_name, covid_folder_name, response_covid) #깃허브의 모든 covid파일을 업로드 할 때
+        # total_cnt = from_git_to_s3_load_all(bucket_name, covid_folder_name, response_covid) #깃허브의 모든 covid파일을 업로드 할 때
+        total_cnt = process_files(bucket_name, covid_folder_name, response_covid) #깃허브의 모든 covid파일을 업로드 할 때
         print(f'업로드한 파일은 총 {total_cnt}개 입니다')
     else:
         print('실패, covid파일을 가져오지 못 했습니다.')

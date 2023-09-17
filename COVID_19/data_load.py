@@ -185,17 +185,18 @@ if __name__ == '__main__':
     for date_prefix, url_list in url_groups.items():
         # 데이터 가공
         df = create_final_df(input_s3_covid_path, url_list)
-
+        df.show(5)
         #파티션 수 늘리기
         df_final_country = df.repartition(10) #셔플 사용, 파티션을 늘리거나 줄이거나 할 수 있음
 
         #결과 데이터프레임을 저장
         output_folder_path = f'{output_local_file_path}{date_prefix}' #메모리 관리 문제 해결중...coalesce(1) #강제가 아닌 이상 셔플 사용X, 파티션을 줄이기만 가능
         (
-             df_final_country
+             df
             .coalesce(1)
             .write
-            .format('parquet')
+            .format('csv') #'parquet'
+            .option('header', 'true')
             .mode('overwrite')
             .save(output_folder_path) 
         )

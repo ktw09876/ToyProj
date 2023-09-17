@@ -2,7 +2,7 @@
 2022.01.01 ~ 2022.11.13(316일) 나라별 COVID-19 확진자 분석
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/2696e54b-c445-4ebd-92ad-16e80e8decc3.png"/>
 
-1. 깃허브 .csv 데이터를 aws S3에 업로드합니다.
+1. 깃허브 api를 호출해서 .csv 데이터를 aws S3에 업로드합니다.
 2. S3 데이터를 Spark를 이용해서 불러와서 가공합니다.
 3. 가공이 끝난 데이터는 Oracle DB에 저장됩니다.
 4. Luigi를 이용해서 워크플로를 관리합니다.

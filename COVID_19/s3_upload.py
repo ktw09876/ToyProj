@@ -75,9 +75,9 @@ def from_git_to_s3_load_all(bucket_name, folder, response):
                 print(f'데이터를 가져오지 못 했습니다. 경로: {url}. Status code: {response.status_code}')
 
         #원하는 년도 데이터 업로드
-        # elif file_info['name'].endswith('.csv'): #.csv 데이터 모두 수집
-        elif file_info['name'].endswith('2022.csv'): #2022년 데이터 수집
-        # elif file_info['name'].startswith('01') and file_info['name'].endswith('2022.csv'): #2022년 01월 데이터만 수집
+        elif file_info['name'].endswith('.csv'): #.csv 데이터 모두 수집
+        # elif file_info['name'].endswith('2022.csv'): #2022년 데이터 수집
+        # elif file_info['name'].startswith('12') and file_info['name'].endswith('2022.csv'): #2022년 01월 데이터만 수집
             url = file_info['download_url'] #download_url의 값을 url 변수에 할당한다
             response = requests.get(url)
             if response.status_code == 200: #응답된 코드가 200이면

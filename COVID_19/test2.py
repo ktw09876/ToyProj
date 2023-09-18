@@ -10,7 +10,6 @@ headers = {
 def url_status(url):
     response = requests.get(url)
     if response.status_code == 200:  # 상태 코드가 200일 때만 출력
-        # print(f"URL: {url}, Status Code: {status_code}")
 
         # #BeautifulSoup()로 웹페이지 분석
         soup = BeautifulSoup(response.text, 'html.parser')
@@ -25,9 +24,9 @@ def url_status(url):
         for onclick in onclick_list:
             if onclick.startswith('https://'):
                 download_url = onclick
-                # break
+                
 
-            print(download_url)
+            # print(download_url)
 
 
 def download_url():
@@ -43,7 +42,7 @@ def download_url():
     for year, month, day in combinations:
         url1 = f'https://www.who.int/publications/m/item/weekly-update-on-covid-19---{day}-{month}-{year}'
         # url2 = f'https://www.who.int/publications/m/item/weekly-epidemiological-update---{day}-{month}-{year}'
-
+        print(url1)
         url_status(url1)
 
         # url_status(url2)

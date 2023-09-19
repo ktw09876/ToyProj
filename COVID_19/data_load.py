@@ -44,19 +44,14 @@ json_schema = StructType([
 #json 파일 불러오기
 json_data = spark.read.option('multiline', 'true').schema(json_schema).json(f'{input_s3_covid_path}country_convert.json')
 
-# S3 버킷의 파일에 접근
-file_paths = (
-             spark.sparkContext.binaryFiles(f's3a://{ul.bucket_name}/{ul.covid_folder_name}')
-            .keys()
-            .collect()
-        )
-
 
 #데이터프레임을 전달 받아서 컬럼명을 날짜형태로 수정하는 함수
 def rename_columns(df):
     renamed_columns = []
 
+    #'Country_Region', 'mm-dd-yyyy'의 형태를
     for col_name in df.columns[1:]: #두번째 컬럼부터
+
         #'mm/dd/yyyy'형태의 컬럼명을 'yyyy/mm/dd'형태로 변환, 좀 더 나은 방법 없을까?
         yyyy = col_name.split('/')[2]
         mm = col_name.split('/')[0]
@@ -171,6 +166,14 @@ def create_final_df(input_s3_covid_path, path):
 
 #월별 daily_repoty url을 리스트로 가져옴
 url_groups  = {}
+
+# S3 버킷의 파일에 접근
+file_paths = (
+             spark.sparkContext.binaryFiles(f's3a://{ul.bucket_name}/{ul.covid_folder_name}')
+            .keys()
+            .collect()
+        )
+
 for url in file_paths:
     if url.endswith('.csv'):
         date_start_index = url.rfind('/') + 1 #오른쪽부터 '/'를 찾아서 +1한 인덱스

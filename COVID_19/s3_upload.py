@@ -7,19 +7,9 @@ aws_access_key_id  = 'AKIA6JQPP6QSR3INWGVJ' #액세스 키 ID
 aws_secret_access_key = 'wppNOtXjI+2mGfBjKcEoEGcSWU49dWCk8vRhV4Bb' #시크릿 액세스 키
 region_name = 'ap-northeast-2' #버킷의 리전 코드(아시아 태평양(서울))
 
-base_url_covid = 'https://api.github.com/repos/CSSEGISandData/COVID-19/contents/csse_covid_19_data/csse_covid_19_daily_reports' #daily_report.csv가 있는 깃허브 api 경로
-base_url_iso = 'https://api.github.com/repos/CSSEGISandData/COVID-19/contents/csse_covid_19_data' #국가정보가 있는 깃허브 api 경로
 bucket_name = 'ktw09876' #버킷 이름
 covid_folder_name = 'csse_covid_19_daily_reports' #버킷 내 coivd_폴더 이름
 iso_folder_name = 'csse_covid_19_daily_reports/iso' #버킷 내 국가정보_폴더 이름
-
-#base_url로 get요청을 보내고 그에 해당하는 응답을 반환함
-# 어떤 방식(method)의 HTTP 요청을 하느냐에 따라서 해당하는 이름의 함수를 사용하면 된다.
-
-# GET 방식: requests.get()
-# POST 방식: requests.post()
-response_covid = requests.get(base_url_covid) 
-response_iso = requests.get(base_url_iso) 
 
 #S3클라이언트를 생성
 client = boto3.client( 
@@ -47,11 +37,9 @@ def upload_to_s3(bucket_name, path, csv_content):
 
 #버킷명, 폴더명, 상태코드를 받아서 깃허브에 있는 모든 .csv파일을 가져오는 함수
 def from_git_to_s3_load_all(bucket_name, folder, response):
+
     files = response.json() #응답 받은 결과를 json 형태로 가져옴
     uploaded_file_count = 0
-
-    # print(files)
-
     for file_info in files:
         if file_info['name'].endswith('Table.csv'): #만약 'name'의 값이 'Table.csv'로 끝난다면
             url = file_info['download_url'] #download_url의 값을 url 변수에 할당한다
@@ -104,8 +92,10 @@ def from_git_to_s3_load_all(bucket_name, folder, response):
 #if __name__  =  =  '__main__': 이하 코드는 현재 스크립트가 다른 곳에서 import되어 사용될 경우 실행하지 않을 코드임
 if __name__ == '__main__': 
     
-    # 깃허브에 있는 iso파일을 aws S3에 저장
-    #더 빠르게 하는 방법 없나?
+    #깃허브에 있는 iso파일을 aws S3에 저장, 더 빠르게 하는 방법 없나?
+    #base_url로 get요청을 보내고 그에 해당하는 응답을 반환함
+    base_url_iso = 'https://api.github.com/repos/CSSEGISandData/COVID-19/contents/csse_covid_19_data' #국가정보가 있는 깃허브 api 경로
+    response_iso = requests.get(base_url_iso) 
     if response_iso.status_code == 200: #성공, 서버가 요청에 응답함
         total_cnt = from_git_to_s3_load_all(bucket_name, iso_folder_name, response_iso) #깃허브의 iso파일을 업로드 할 때
         print(f'업로드한 파일은 총 {total_cnt}개 입니다')
@@ -113,6 +103,8 @@ if __name__ == '__main__':
         print('실패, iso파일을 가져오지 못 했습니다.')
 
     # 깃허브에 있는 covid파일을 aws S3에 저장
+    base_url_covid = 'https://api.github.com/repos/CSSEGISandData/COVID-19/contents/csse_covid_19_data/csse_covid_19_daily_reports' #daily_report.csv가 있는 깃허브 api 경로
+    response_covid = requests.get(base_url_covid) 
     if response_covid.status_code == 200: #성공, 서버가 요청에 응답함
         total_cnt = from_git_to_s3_load_all(bucket_name, covid_folder_name, response_covid) #깃허브의 모든 covid파일을 업로드 할 때
         print(f'업로드한 파일은 총 {total_cnt}개 입니다')

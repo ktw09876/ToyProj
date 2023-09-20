@@ -1,52 +1,31 @@
-import requests
-from bs4 import BeautifulSoup
-from itertools import product
+import findspark 
+findspark.init()
 
-# 내가 접속한 브라우저 정보를 알려줌, 로봇이 아닌 사람이 접근했다고 알리는 기능
-headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36'
-}
+from pyspark.sql import SparkSession
+import pandas as pd
 
-def url_status(url):
-    response = requests.get(url)
-    if response.status_code == 200:  # 상태 코드가 200일 때만 출력
+# 스파크 세션 생성
+spark = SparkSession.builder.appName("pivot_test").getOrCreate()
 
-        # #BeautifulSoup()로 웹페이지 분석
-        soup = BeautifulSoup(response.text, 'html.parser')
+# 주어진 데이터프레임 생성
+data = [
+    ("Afghanistan", 203167, 203265, 203395, 203497, 203574, 203681, 203829, 203942, 204094, 204287, 204392, 204417, 204510),
+    ("Albania", 332969, 332996, 332996, 333027, 333046, 333055, 333058, 333071, 333088, 333103, 333125, 333138, 333156),
+    ("Algeria", 270839, 270840, 270847, 270856, 270862, 270873, 270881, 270891, 270906, 270917, 270924, 270929, 270939),
+    # 다른 국가/지역 데이터도 추가
+]
 
-        # # #COVID-19 역학 보고서 버튼 찾기
-        download_btn = soup.select_one('#PageContent_C001_Col00 > article > section > div > div.dynamic-content__figure-container > div > a')
+columns = ["Country_Region", "2022/11/01", "2022/11/02", "2022/11/03", "2022/11/04", "2022/11/05", "2022/11/06", "2022/11/07", "2022/11/08", "2022/11/09", "2022/11/10", "2022/11/11", "2022/11/12", "2022/11/13"]
 
-        # #COVID-19 역학 보고서 버튼에서 보고서 다운 url 추출
-        onclick_list = download_btn['onclick'].split("'")
-        download_url = ''
+df = spark.createDataFrame(data, columns)
+df.show()
 
-        for onclick in onclick_list:
-            if onclick.startswith('https://'):
-                download_url = onclick
-                
+# 데이터프레임을 Pandas로 변환
+pandas_df = df.toPandas()
 
-            # print(download_url)
+# "Country_Region" 열을 인덱스로 설정
+pandas_df.set_index("Country_Region", inplace=True)
 
-
-def download_url():
-    years = ['2020', '2021', '2022', '2023']
-    months = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december']
-    days = [str(i) for i in range(1, 32)]
-
-    # 모든 조합 생성
-    combinations = product(years, months, days)
-
-    tasks = []
-
-    for year, month, day in combinations:
-        url1 = f'https://www.who.int/publications/m/item/weekly-update-on-covid-19---{day}-{month}-{year}'
-        # url2 = f'https://www.who.int/publications/m/item/weekly-epidemiological-update---{day}-{month}-{year}'
-        print(url1)
-        url_status(url1)
-
-        # url_status(url2)
-    
-    
-if __name__ == "__main__":
-    download_url()    
+# 행과 열을 바꾸기 위해 transpose (T) 사용
+transposed_df = pandas_df.T
+print(transposed_df)

@@ -141,6 +141,11 @@ def create_final_df(input_s3_covid_path, path):
 
     # 컬럼명을 내가 원하는 날짜형태로 수정
     result_df = rename_columns(df)
+
+    #pivot 추가
+    # # 데이터프레임의 행과 열을 바꾸기 위해 'pivot' 사용
+    # pivot_df = df.groupBy("category").pivot("id").agg({"value": "first"})
+
     
     return result_df
 

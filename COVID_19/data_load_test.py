@@ -8,13 +8,13 @@ from itertools import product
 
 
 #넘겨 받은 download_url_list를 각 월에 맞는 길이로 나눠서 데이터프레임을 생성 후 기존 데이터프레임에 추가하는 함수 ing...
-def url_mapping(url_list_in):
+def url_mapping():
     #불러올 .csv 경로
     int_months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11']
     csv_file = ''
-    days_in_each_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30]
-    result = []
-    start_idx = 0
+    # days_in_each_month = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30]
+    # result = []
+    # start_idx = 0
 
     for int_month in int_months:
         covid_paths = f'COVID_19/output/{int_month}/'
@@ -25,21 +25,21 @@ def url_mapping(url_list_in):
         
         df = pd.read_csv(
                       f'{covid_paths}{csv_file}'
-                    , header = True
-                    , inferSchema = True
+                    , header = 0
                 )
+        print(df.head())
     
-    #url_list를 월 날짜 개수 별로 나눔
-    for days in days_in_each_month:
-        end_idx = start_idx + days
-        result.append(url_list_in[start_idx:end_idx])
-        start_idx = end_idx
+    # #url_list를 월 날짜 개수 별로 나눔
+    # for days in days_in_each_month:
+    #     end_idx = start_idx + days
+    #     result.append(url_list_in[start_idx:end_idx])
+    #     start_idx = end_idx
     
-        # 새로운 행을 생성
-        df = df.append(new_row, ignore_index=True)
+    #     # 새로운 행을 생성
+    #     df = df.append(new_row, ignore_index=True)
     
-    new_df = df.union(pd.DataFrame([new_row]))
-    new_df.tail(5)
+    # new_df = df.union(pd.DataFrame([new_row]))
+    # new_df.tail(5)
 
 #코로나 역학 보고서의 download url가 있는 페이지의 url을 생성하는 함수 매개변수 없음
 def get_downlaod_url_list():
@@ -81,7 +81,6 @@ def get_download_url(url):
         # #COVID-19 역학 보고서 버튼에서 보고서 다운 url 추출
         onclick_list = download_btn['onclick'].split("'")
         download_url = ''
-
         for download_url in onclick_list:
             if download_url.startswith('https://'):
                 return download_url
@@ -91,5 +90,5 @@ def get_download_url(url):
 #https://www.who.int/emergencies/diseases/novel-coronavirus-2019/situation-reports
 url_list = []
 if __name__ == "__main__":
-    url_list = get_downlaod_url_list()
-    url_mapping(url_list)
+    # url_list = get_downlaod_url_list()
+    url_mapping()

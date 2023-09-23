@@ -4,41 +4,47 @@ from selenium.webdriver.common.by import By
 from datetime import datetime
 
 import time
+import re
+import pandas as pd
 
-# #크롬 드라이버 자동 업데이트
-# from webdriver_manager.chrome import ChromeDriverManager
 
-#옵션 설정
-options = webdriver.ChromeOptions()
+#download url을 전달 받아서 url에 있는 날짜를 추출하는 함수
+def get_url_date(download_url):
+    url_date = ''
+    url_date_sort = ''
 
-# headless 옵션 설정
-options.add_argument('headless')
-options.add_argument('no-sandbox')
+    catch_spilt = download_url.split('/')[-1]
+    if catch_spilt.startswith('20'):
+        url_date = catch_spilt.split('_')[0]
+        url_date_sort = datetime.strptime(url_date, '%Y%m%d')
+        url_date_sort = url_date_sort.strftime('%Y/%m/%d')
+        # print(url_date_sort)
+        
+        return url_date_sort
+    elif catch_spilt.startswith('who'):
+        # print(catch_spilt)
+        date_pattern = r'(\w+)[_-](\w+)[_-](\d{4})'
+        match = re.search(date_pattern, catch_spilt)
+        if match:
+            month = match.group(2)
+            year = match.group(3)
+            date_form = f'{year}/{month}'
+            
+            return date_form
+        else:
+            print(f"에러! 해당 패턴이 확인되지 않습니다! {catch_spilt}")
+    else:
+        print(f'에러!! 해당 download_url을 다시 확인해주세요 {catch_spilt}')
 
-# 사람처럼 보이게 하는 옵션들
-options.add_argument('disable-gpu')   # 가속 사용 x
-options.add_argument('lang=ko_KR')    # 가짜 플러그인 탑재
-options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36')  # user-agent 이름 설정
 
-#브라우저 꺼짐 방지
-chrome_options = Options()
-chrome_options.add_experimental_option('detach', True)
-
-#불필요한 에러메시지 없애기
-chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
-
-url = 'https://www.who.int/emergencies/diseases/novel-coronavirus-2019/situation-reports'
-
-#웹 브라우저 띄우기
-browser = webdriver.Chrome(options = chrome_options)
-
-browser.maximize_window() #화면 최대화
-browser.get(url)
-browser.implicitly_wait(2) #로딩이 끝날때까지 2초를 기다림
-
+#COVID-19 역학 보고서 박스의 selector를 전달 받아서 COVID-19 역학 보고서의 download url을 추출하는 함수
 def get_download_url(selector):
-    download_url = ''
     
+    download_btn = ''
+    onclick = ''
+    download_url = ''
+
+    #225개
     try:
 
         #COVID-19 역학 보고서 버튼 찾기
@@ -50,66 +56,105 @@ def get_download_url(selector):
         #download_btn에서 COVID_19 역학 보고서 다운 url 추출
         onclick = download_btn.get_attribute('onclick')
         download_url = onclick.split("'")[3]
-        print(download_url)
+        # print(download_url)
     except:
         print(f'에러!!! {selector}를 다시 확인해주세요')
-        time.sleep(2) # 아직 페이지가 뜨지도 않았는데 바로 다음 명령어가 실행될 수도 있으니까, 2초 정도 여유를 준다.
+        time.sleep(2) 
     
     browser.get(url)
-    time.sleep(2)
+    time.sleep(2) # 아직 페이지가 뜨지도 않았는데 바로 다음 명령어가 실행될 수도 있으니까, 2초 정도 여유를 준다.
     return download_url
 
-#매개변수 없이 각 코로나 역학 보고서 박스에서 'yyyy/mm/dd'형태의 날짜를 추출하는 함수
-def get_span_date():
+#매개변수 없이 각 코로나 역학 보고서 박스에 있는 날짜에서 'yyyy/mm/dd'형태의 날짜를 리스트형태로 얻는 함수
+# def get_span_date():
+    elements = ''
         
     #class가 'sf-meeting-report-list__data'인 대상, 리스트 형태임
     elements = browser.find_elements(By.CLASS_NAME, 'sf-meeting-report-list__data')
 
     #class가 'sf-meeting-report-list__data'인 대상에서 <span>의 값을 가져옴
+    #257개
     span_list = []
     for element in elements:
-        try:
-            #<span> 찾기
-            span_element = element.find_element(By.TAG_NAME, 'span')
+        span_element = ''
+        span_text = ''
 
-            #<span>의 값을 가져옴
-            span_text = span_element.text
- 
-            span_list.append(span_text)
-            
-        except Exception as e:
-            print(f'에러! 로직 확인해주세요: {str(e)}')
-    
-    #span리스트('12 September 2023', '17 August 2023', ...)에서 'yyyy/mm/dd'형태로 전환
-    span_date_list = []
-    for span in span_list:
+        #<span> 찾기
+        span_element = element.find_element(By.TAG_NAME, 'span')
+
+        #<span>의 값을 가져옴
+        span_text = span_element.text
+
         #'17 August 2023'형태에서 날짜 추출
-        date_val = datetime.strptime(span, '%d %B %Y')
+        date_val = datetime.strptime(span_text, '%d %B %Y')
         
-        #'yyyy-mm-dd'형태로 전환
+        #'yyyy/mm/dd'형태로 전환
         date_sort = date_val.strftime('%Y/%m/%d')
-        
+
+        print(date_sort)
         #리스트 추가
-        span_date_list.append(date_sort)
-
-    for formatted_date in span_date_list:
-        print(formatted_date)
+        span_list.append(date_sort)
 
 
-download_url_cnt = 0 
+
 if __name__ == "__main__":
-    cnt = 0
+    # #크롬 드라이버 자동 업데이트
+    # from webdriver_manager.chrome import ChromeDriverManager
+
+    #옵션 설정
+    options = webdriver.ChromeOptions()
+
+    # headless 옵션 설정
+    options.add_argument('headless')
+    options.add_argument('no-sandbox')
+
+    # 사람처럼 보이게 하는 옵션들
+    options.add_argument('disable-gpu')   # 가속 사용 x
+    options.add_argument('lang=ko_KR')    # 가짜 플러그인 탑재
+    options.add_argument('user-agent=Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/61.0.3163.100 Safari/537.36')  # user-agent 이름 설정
+
+    chrome_options = Options()
+    # #브라우저 꺼짐 방지
+    # chrome_options.add_experimental_option('detach', True)
+
+    #불필요한 에러메시지 없애기
+    chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
+
+    url = 'https://www.who.int/emergencies/diseases/novel-coronavirus-2019/situation-reports'
+
+    #웹 브라우저 띄우기
+    browser = webdriver.Chrome(options = chrome_options)
+    browser.maximize_window() #화면 최대화
+    browser.get(url)
+    browser.implicitly_wait(2) #로딩이 끝날때까지 2초를 기다림
+
+    
+    download_url_catch = ''
+    download_url_list = []
+    url_date_list = []
     for i in range(6, 80):
         for j in range(1, 11):
-            selector = f'#PageContent_C006_Col01 > div:nth-child({i}) > a:nth-child({j})'
-            download_url_catch = get_download_url(selector)
 
-            if download_url_catch:
-                download_url_cnt += 1
+            report_selector = f'#PageContent_C006_Col01 > div:nth-child({i}) > a:nth-child({j})'
+            #https://www.who.int/docs/default-source/coronaviruse/situation-reports/20230601_weekly_epi_update_145.pdf?sfvrsn=33c590af_4&download=true
+            #https://cdn.who.int/media/docs/default-source/documents/emergencies/who_mou_august_2023.pdf?sfvrsn=852da432_1&download=true
+            #https://cdn.who.int/media/docs/default-source/documents/emergencies/who-mou-february-2023.pdf?sfvrsn=98ca2024_3&download=true
+            #who_mou_26may.pdf?sfvrsn=6bbf0599_1&download=true
+            download_url_catch = get_download_url(report_selector)
+            download_url_list.append(download_url_catch)
+
+            #download_url_catch에서 날짜 추출
+            url_date_catch = get_url_date(download_url_catch)
+            url_date_list.append(url_date_catch)
     
-    print(f"Total download URLs found: {download_url_cnt}")
-    
+    columns = ['날짜', 'report_url']
+    data = {
+          '날짜': url_date_list
+        , 'report_url': download_url_list
+    }
+
+    df = pd.DataFrame(data)
+    print(data)
+    df.to_csv('ToyProj/COVID_19/output/COVID_weekly_report/report.csv', index = False)
+
 browser.quit()
-    
-
-    # get_span_date()

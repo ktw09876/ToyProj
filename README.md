@@ -3,7 +3,7 @@
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/2696e54b-c445-4ebd-92ad-16e80e8decc3.png"/>
 
 - 원본 데이터
-<img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/00390b9e-1f6e-4a1e-ae17-b482db86861d.png"/>
+<img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/f55458fb-6724-4aac-a886-4e5814719171"/>
 
 - 가공 후 데이터
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/1bb0cb1f-736b-4ef4-8516-d1f64225a7db"/>

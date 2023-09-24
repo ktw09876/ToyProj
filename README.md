@@ -1,10 +1,13 @@
 # ETL, 파이프라인
 2022.01.01 ~ 2022.11.13(316일) 나라별 COVID-19 확진자 분석
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/2696e54b-c445-4ebd-92ad-16e80e8decc3.png"/>
+
 - 원본 데이터
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/00390b9e-1f6e-4a1e-ae17-b482db86861d.png"/>
+
 - 가공 후 데이터
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/1bb0cb1f-736b-4ef4-8516-d1f64225a7db"/>
+
 - weekly_report
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/7c38e3b6-4535-4b1c-aa26-5607a1e576ee"/>
 

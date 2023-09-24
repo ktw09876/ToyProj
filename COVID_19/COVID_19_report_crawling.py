@@ -1,10 +1,8 @@
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support import expected_conditions as EC
-from datetime import datetime
 
+from datetime import datetime
 import time
 import re
 import pandas as pd
@@ -25,16 +23,15 @@ def get_url_date(download_url):
     url_date_sort = ''
 
     catch_spilt = download_url.split('/')[-1]
-    if catch_spilt.startswith('20'):
+    if catch_spilt.startswith('2022'):
         try:  
             url_date = catch_spilt.split('_')[0]
             url_date_sort = datetime.strptime(url_date, '%Y%m%d')
             url_date_sort = url_date_sort.strftime('%Y/%m/%d')
             return url_date_sort, download_url
         except:
-            print(f'.startswith("20")중에서 새로운 패턴입니다 확인해주세요 패턴: {catch_spilt}')
+            print(f'.startswith("2022")중에서 새로운 패턴입니다 확인해주세요 패턴: {catch_spilt}')
         
-    
     # https://cdn.who.int/media/docs/default-source/documents/emergencies/who_mou_august_2023.pdf?sfvrsn=852da432_1&download=true
     # https://cdn.who.int/media/docs/default-source/documents/emergencies/who-mou-february-2023.pdf?sfvrsn=98ca2024_3&download=true
     elif catch_spilt.startswith('who'):
@@ -43,10 +40,14 @@ def get_url_date(download_url):
         if match:
             month = match.group(2)
             year = match.group(3)
-            date_form = f'{year}/{month}'
+            if year == '2022':
+                date_form = f'{year}/{month}'
+
+                return date_form, download_url
             
-            return date_form, download_url
-        
+            else:
+                print(f'년도가 2022가 아닙니다 해당 년도: {year}')
+              
         else:
             print(f"에러! 해당 패턴이 확인되지 않습니다! 패턴:{download_url}")
     # https://www.who.int/docs/default-source/coronaviruse/covid-19-who-monthly-update-october-2022.pdf?sfvrsn=57f64f6b_1&download=true
@@ -59,8 +60,6 @@ def get_url_date(download_url):
             date_form = f'{year}/{month}'
             
             return date_form, download_url
-    # https://www.who.int/docs/default-source/coronaviruse/weekly-updates/wou_3nov_cleared.pdf?sfvrsn=19e7a718_3&download=true
-    # elif:
 
     else:
         print(f'에러!! 해당 download_url을 다시 확인해주세요 url: {download_url}')
@@ -89,7 +88,7 @@ def get_download_url(selector):
         time.sleep(5)
     
     driver.back()
-    time.sleep(5) # 아직 페이지가 뜨지도 않았는데 바로 다음 명령어가 실행될 수도 있으니까, 2초 정도 여유를 준다.
+    time.sleep(5) # 아직 페이지가 뜨지도 않았는데 바로 다음 명령어가 실행될 수도 있으니까, 5초 정도 여유를 준다.
 
     return download_url
 

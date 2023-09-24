@@ -9,7 +9,7 @@
 <img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/1bb0cb1f-736b-4ef4-8516-d1f64225a7db"/>
 
 - weekly_report
-<img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/7c38e3b6-4535-4b1c-aa26-5607a1e576ee"/>
+<img width="1000" src="https://github.com/ktw09876/ToyProj/assets/93371320/e4b02b22-cb16-4c50-be43-56162d7b09d6"/>
 
 1. 깃허브 api를 호출해서 .csv 데이터를 aws S3에 업로드합니다.
 2. S3 데이터를 Spark를 이용해서 불러와서 가공합니다.
@@ -36,3 +36,4 @@
 1. 좀 더 많은 데이터를 다루는 경우 처리 방식 개선(스택오버플로우, 메모리 부족 ...)
 2. 데이터를 직접 생성해볼 수 있을까?
 3. 매일 자정에 실행 or 데이터 목록을 모니터링, 변화가 있으면 실행, 에러가 있다면 메세지와 함께 개인 이메일로 확인
+4. 크롤링의 날짜 조건을 좀 더 단순하고 직관적으로 개선하고 싶다

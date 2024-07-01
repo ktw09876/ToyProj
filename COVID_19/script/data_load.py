@@ -2,12 +2,13 @@ import os
 ###현재 작업 디렉토리를 스크립트 위치로 변경
 script_dir = os.path.dirname(__file__) #현재 스크립트의 절대 경로 중 폴더까지의 경로를 가져온다
 os.chdir(script_dir) #해당 경로로 작업 경로를 변경한다
-# print(f"script path: {os.getcwd()}") #변경된 경로 확인
+# print(f'script path: {os.getcwd()}') #변경된 경로 확인
 import s3_upload as ul
 
 import boto3
 from functools import reduce
 from pyspark.sql import SparkSession, DataFrame
+import re
 
 class DataLoad():
     def __init__(self, ul_client: ul.MinioUpload):
@@ -15,18 +16,16 @@ class DataLoad():
         # Spark 세션 생성 #UI에 표현되는 이름
         self.spark = (
             SparkSession.builder 
-            .appName("Read CSV from MinIO") #spark 어플리케이션 이름, UI에 표현되는 이름
-            .config("spark.hadoop.fs.s3a.endpoint", f'http://{ul_client.ip}:{ul_client.port}') 
-            .config("spark.hadoop.fs.s3a.access.key", ul_client.username) 
-            .config("spark.hadoop.fs.s3a.secret.key", ul_client.password) 
-            .config("spark.hadoop.fs.s3a.impl", "org.apache.hadoop.fs.s3a.S3AFileSystem") #hadoop 파일 시스템 구현, S3에 접근하기 위해 필요
-            .config("spark.hadoop.fs.s3a.path.style.access", True) #S3 스토리지의 객체에 접근할 때 필요
-            .config("spark.hadoop.fs.s3a.connection.ssl.enabled", False) #SSL 연결 활성화 여부, False = http/ True = https
+            .appName('Read CSV from MinIO') #spark 어플리케이션 이름, UI에 표현되는 이름
+            .config('spark.hadoop.fs.s3a.endpoint', f'http://{ul_client.ip}:{ul_client.port}') 
+            .config('spark.hadoop.fs.s3a.access.key', ul_client.username) 
+            .config('spark.hadoop.fs.s3a.secret.key', ul_client.password) 
+            .config('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem') #hadoop 파일 시스템 구현, S3에 접근하기 위해 필요
+            .config('spark.hadoop.fs.s3a.path.style.access', True) #S3 스토리지의 객체에 접근할 때 필요
+            .config('spark.hadoop.fs.s3a.connection.ssl.enabled', False) #SSL 연결 활성화 여부, False = http/ True = https
             .config('spark.hadoop.home', 'D:/tool/Python/hadoop/hadoop-3.3.6') #S3 스토리지의 객체에 접근할 때 필요, hadoop 경로
             .getOrCreate()
         )
-
-        self.output = os.path.join('..', 'output')
 
     ###MiniO에 있는 파일을 리스트 형태로 읽어서 반환
     def bucket_read_data(self, brd_client: boto3.client, brd_bucket_name: str) -> list:
@@ -39,10 +38,10 @@ class DataLoad():
 
         file_list = []
 
-        for page in list:
-            if "Contents" in page:
-                for obj in page["Contents"]:
-                    file_list.append(obj["Key"])
+        for content in list:
+            if 'Contents' in content:
+                for obj in content['Contents']:
+                    file_list.append(obj['Key'])
 
         return file_list
 
@@ -58,44 +57,38 @@ class DataLoad():
             # df.show(10) #결과 확인
 
             ###데이터프레임 전처리
-            #'Confirmed'컬럼이 있으면
+            ###'Confirmed'컬럼이 있으면
             if 'Confirmed' in df.columns:
                 drop_df = df.dropna(subset = ['Confirmed'])                                 #'Confirmed'의 값이 없는 행 삭제
-                cast_df = drop_df.withColumn('Confirmed', drop_df['Confirmed'].cast('int')) #'Confirmed'값을 int형으로 타입 변환
-                sum_df = cast_df.groupBy('Country_Region').sum('Confirmed')                 # 각 나라(Country_Region) 별로 group by
+                int_df = drop_df.withColumn('Confirmed', drop_df['Confirmed'].cast('int'))  #'Confirmed'값을 int형으로 타입 변환
+                sum_df = int_df.groupBy('Country_Region').sum('Confirmed')                  # 각 나라(Country_Region) 별로 group by
                 rename_df = sum_df.withColumnRenamed('Country/Region', 'Country_Region')    #'Country/Region' --> 'Country_Region' 컬럼명 수정
-
-                ###'Country_Region' 와 'Confirmed' 만 가지고 새로운 데이터프레임 생성
-                select_df = rename_df.select('Country_Region', 'sum(Confirmed)')
+                select_df = rename_df.select('Country_Region', 'sum(Confirmed)')            #'Country_Region' 와 'Confirmed' 만 가지고 새로운 데이터프레임 생성
                 # select_df.show(10) # 결과 확인
 
                 return select_df
             
-            #'Confirmed'컬럼이 없으면
+            ###'Confirmed'컬럼이 없으면
             else: 
                 print(f"Error!! The column name 'Confirmed' cannot be found in the file. {cd_df_name}")
 
     ###최종 데이터프레임 생성
     def create_final_df(self, cfd_df: DataFrame, cfd_columns: list) -> DataFrame:
-        cfd_columns.insert(0, cfd_df.columns[0]) #날짜 형태의 리스트 첫번째에 'Country_Region' 추가
-        
-        ###데이터프레임 컬럼명을 날짜 형태로 모두 변경
-        df_renamed = cfd_df.toDF(*cfd_columns)
-
-        ###컬럼명을 날짜 별로 정렬
-        df_sorted = df_renamed.select('Country_Region', *sorted(df_renamed.columns[1:]))
+        cfd_columns.insert(0, cfd_df.columns[0])                                            #날짜 형태의 리스트 첫번째에 'Country_Region' 추가
+        df_renamed = cfd_df.toDF(*cfd_columns)                                              #데이터프레임 컬럼명을 날짜 형태로 모두 변경(이후 날짜 별로 정렬하기 위해서)
+        df_sorted = df_renamed.select('Country_Region', *sorted(df_renamed.columns[1:]))    #컬럼명을 날짜 별로 정렬
 
         return df_sorted
 
     ###데이터프레임을 join
     def join_dataframes(self, prev_df: DataFrame, next_df: DataFrame) -> DataFrame:
-        return prev_df.join(next_df, on = 'Country_Region', how = "outer")
+        return prev_df.join(next_df, on = 'Country_Region', how = 'outer')
 
-    #파일명(01-01-2021.csv)을 전달 받아서 날짜형태 문자열을 리턴
+    ###파일명(01-01-2021.csv)을 전달 받아서 날짜형태 문자열을 리턴
     def rename_columns(self, rnc_name: str) -> str:
         date_str = rnc_name.replace('.', '-') #'01-01-2021.csv' --> '01-01-2021-csv' 로 변환
 
-        #'mm-dd-yyyy-csv'를 'yyyy/mm/dd'형태로 변환
+        ###'mm-dd-yyyy-csv'를 'yyyy/mm/dd'형태로 변환
         yyyy = date_str.split('-')[2]
         mm = date_str.split('-')[0]
         dd = date_str.split('-')[1]
@@ -103,16 +96,29 @@ class DataLoad():
 
         return date_form
     
-    ###년도 별로 나눠서 저장 ing...
-    def save_df(self, sd_df: DataFrame, sd_output: str) -> None:
-        (
-            sd_df
-            .coalesce(1)
-            .write.mode('overwrite')
-            .option('header', 'true')
-            .csv(fr'{sd_output}')
-        )
-        print(f'path: {sd_output} save access')
+    ###로컬에 데이터프레임 연도 별 .csv 로 저장
+    def save_df(self, sd_df: DataFrame) -> None:
+        years_dict = {}
+        sd_output = os.path.join('..', 'output')
+
+        for col in sd_df.columns[1:]:                           #최종 데이터프레임의 두 번째 컬럼부터 반복하면서 
+            year = col[:4]                                      #각 컬럼의 년도를 추출
+
+            if year not in years_dict:
+                years_dict[year] = []                           #{'2021': []}
+            years_dict[year].append(col)                        #{'2021': ['2021/01/01']} 와 같이 years_dict 에 추가
+
+        ###Country_Region 컬럼 추가
+        for year in years_dict:                                 #years_data 의 키('2021', '2022', '2023', ...) 를 반복
+            if years_dict[year]:                                #해당 키의 값(['2021/01/01', '2021/01/02', ...])이 있으면
+                years_dict[year].insert(0, sd_df.columns[0])    #해당 리스트 첫 번째에 'Country_Region' 삽입
+
+        ###분할된 데이터프레임을 저장
+        for year, columns in years_dict.items():
+            if columns:
+                df_year = sd_df.select(columns)
+                df_year.coalesce(1).write.mode('overwrite').option('header', 'true').csv(os.path.join(sd_output, year))
+                print(f'Year {year} data saved at {os.path.join(sd_output, year)}')
                  
         
 def main():
@@ -144,7 +150,7 @@ def main():
     print(f'total column count:{len(final_df.columns)}')
 
     #결과 데이터프레임을 저장
-    dl_cli.save_df(final_df, dl_cli.output)
+    dl_cli.save_df(final_df)
 
     ###DB insert ing...
     

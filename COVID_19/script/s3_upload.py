@@ -17,7 +17,7 @@ class MinioUpload():
     def __init__(self, base_url: str):
 
         ###minio 접속 정보
-        self.ip, self.port, self.username, self.password, self.bucket_name = self.read_conf(r'..\setting/setting.ini')
+        self.ip, self.port, self.username, self.password, self.bucket_name = self.read_conf(os.path.join('..', 'setting', 'setting.ini'))
 
         # boto3 클라이언트 생성
         self.s3_client = boto3.client(
@@ -45,36 +45,39 @@ class MinioUpload():
         config = parser.ConfigParser()
         config.read(conf_path)
 
-        ip = config['DEFAULT']['ip']
-        port = config['DEFAULT']['port']
-        username = config['DEFAULT']['username']
-        password = config['DEFAULT']['password']
-        bucket_name = config['DEFAULT']['bucket_name']
+        ip = config['MiniO']['ip']
+        port = config['MiniO']['port']
+        username = config['MiniO']['access_key']
+        password = config['MiniO']['secret_key']
+        bucket_name = config['MiniO']['bucket_name']
 
         return ip, port, username, password, bucket_name
     
     ###.csv가 있는 GitHub 저장소의 폴더에 접근
-    def git_repository_access(self, gtm_base_url: str, gtm_log_path: str) -> list:
-        git_response = requests.get(gtm_base_url) #api 호출
-
-        ###성공, 서버가 요청에 응답함
+    def git_repository_access(self, gra_base_url: str, gra_log_path: str) -> list:
         try:
-            if git_response.status_code in(200, 201):
-                return git_response.json()
+            git_response = requests.get(gra_base_url) #api 호출
+            if git_response.status_code in(200, 201): ###성공, 서버가 요청에 응답함
+                git_response_json = git_response.json()
+
+                return git_response_json
 
         ###GitHub 폴더에 접근 실패
         except Exception as e:
-            current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 시간 기록
+            print('You cannot access the GitHub repository')
+            self.error_log_write(gra_log_path, f'You cannot access the GitHub repository: {e}')
 
-            ###실패 로그 기록
-            with open(os.path.join(gtm_log_path, 'error_log.txt'), 'a') as error_logs: 
-                error_logs.write(f'{current_time} You cannot access the GitHub repository: {e}\n')
+    ###로그 파일 경로와 에러메세지를 전달 받아서 시간과 에러메세지를 저장
+    def error_log_write(self, elw_log_path, elw_message):
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 시간 기록
+        with open(os.path.join(elw_log_path, 'error_log.txt'), 'a') as error_logs:
+            error_logs.write(f'{current_time} {elw_message}\n')
 
     ###파일을 MiniO에 업로드
     def upload_minio(self, um_client: boto3, um_file_name: str, um_data_stream: BytesIO, um_log_path: str) -> None:
 
         ### 성공, 파일을 MiniO에 업로드
-        try:
+        try: 
             um_client.put_object(
                  Bucket = self.bucket_name #버킷 이름
                 ,Key = um_file_name #파일 이름
@@ -83,48 +86,35 @@ class MinioUpload():
                 ,ContentType = 'application/csv' # MIME 유형
             )
             print(f'File upload successful!!! {um_file_name}')
-        
+
         ###실패
         except Exception as e:
-            um_current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 시간 기록
-            
-            ###실패 로그 기록
-            with open(os.path.join(um_log_path, 'error_log.txt'), 'a') as error_logs:
-                error_logs.write(f'{um_current_time} error!!! Upload failed: {e}\n')
-            
             print('error!!! Upload failed')
+            self.error_log_write(um_log_path, f'error!!! Upload failed: {e}')
 
     ###GitHub 에서 .csv를 다운로드해서 MiniO에 업로드
     def git_to_minio(self, git_response_json, gtm_s3_client, gtm_log_path, gtm_ttl_count):
 
-        ###.csv의 downlaod url 을 가지고 다시 api 호출, 각 daily report 를 다운 받을 수 있음
-        try:
-            for key in git_response_json:
+        ###.csv의 downlaod url 을 가지고 다시 api 호출, 각 daily report 를 다운
+        for key in git_response_json:
+            try:
                 if re.compile(r'\d{2}-\d{2}-\d{4}\.csv$').match(key['name']): #json 데이터 중에 key가 'name'인 값이 날짜형식이면서 .csv로 끝나는 대상
-                    download_url = key['download_url'] #download url 추출
+                    download_url = key['download_url']                        #download url 추출
                     file_name = key['name']
-                
-                    ###해당 .csv를 download
-                    csv_response = requests.get(download_url)
+                    
+                    csv_response = requests.get(download_url)                 #해당 .csv를 download
+                    if csv_response.status_code in(200, 201):                 #성공, 서버가 요청에 응답함
 
-                    ###성공, 서버가 요청에 응답함
-                    if csv_response.status_code in(200, 201):
-
-                        ### minio에 업로드
+                        ###MiniO에 업로드
                         self.upload_minio(gtm_s3_client, file_name, BytesIO(csv_response.content), gtm_log_path)
-                        gtm_ttl_count += 1 #total count 1 증가
-                
-                time.sleep(1) #업로드 주기 조절
+                        gtm_ttl_count += 1                                    #total count 1 증가
+                    time.sleep(1)                                             #업로드 주기 조절
 
-        except Exception as e:
-            gtm_current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S') # 시간 기록
-
-            ###error log 기록
-            with open(os.path.join(gtm_log_path, 'error_log.txt'), 'a') as error_logs:
-                error_logs.write(f'{gtm_current_time} The .csv cannot be downloaded file name: {file_name}, {e}\n') 
-
-        print(f'total uploaded count: {gtm_ttl_count}')
+            except Exception as e:
+                print(f'The .csv cannot be downloaded file name: {file_name}')
+                self.error_log_write(gtm_log_path, f'The .csv cannot be downloaded file name: {file_name} {e}')
             
+        print(f'total uploaded count: {gtm_ttl_count}')
 
 
 def main():

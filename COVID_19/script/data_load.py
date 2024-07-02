@@ -8,24 +8,25 @@ import s3_upload as ul
 import boto3
 from functools import reduce
 from pyspark.sql import SparkSession, DataFrame
-import re
 
 class DataLoad():
     def __init__(self, ul_client: ul.MinioUpload):
-
-        # Spark 세션 생성 #UI에 표현되는 이름
         self.spark = (
-            SparkSession.builder 
-            .appName('Read CSV from MinIO') #spark 어플리케이션 이름, UI에 표현되는 이름
+            SparkSession.builder                                                                                                         #spark 세션 생성 #UI에 표현되는 이름
+            .appName('Read CSV from MinIO')                                                                                              #spark 어플리케이션 이름, UI에 표현되는 이름
             .config('spark.hadoop.fs.s3a.endpoint', f'http://{ul_client.ip}:{ul_client.port}') 
             .config('spark.hadoop.fs.s3a.access.key', ul_client.username) 
             .config('spark.hadoop.fs.s3a.secret.key', ul_client.password) 
-            .config('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem') #hadoop 파일 시스템 구현, S3에 접근하기 위해 필요
-            .config('spark.hadoop.fs.s3a.path.style.access', True) #S3 스토리지의 객체에 접근할 때 필요
-            .config('spark.hadoop.fs.s3a.connection.ssl.enabled', False) #SSL 연결 활성화 여부, False = http/ True = https
-            .config('spark.hadoop.home', 'D:/tool/Python/hadoop/hadoop-3.3.6') #S3 스토리지의 객체에 접근할 때 필요, hadoop 경로
+            .config('spark.hadoop.fs.s3a.impl', 'org.apache.hadoop.fs.s3a.S3AFileSystem')                                                #hadoop 파일 시스템 구현, S3에 접근하기 위해 필요
+            .config('spark.hadoop.fs.s3a.path.style.access', True)                                                                       #S3 스토리지의 객체에 접근할 때 필요
+            .config('spark.hadoop.fs.s3a.connection.ssl.enabled', False)                                                                 #SSL 연결 활성화 여부, False = http/ True = https
+            .config('spark.hadoop.home', 'D:/tool/Python/hadoop/hadoop-3.3.6')                                                           #S3 스토리지의 객체에 접근할 때 필요, hadoop 경로
+            .config('spark.jars', r'D:\tool\new\pkgs\pyspark-3.4.1-py38haa95532_0\Lib\site-packages\pyspark\jars\postgresql-42.7.3.jar') #postgreSQL 드라이버
             .getOrCreate()
         )
+
+        ###결과 데이터프레임 로컬 저장 경로
+        self.output = os.path.join('..', 'output')
 
     ###MiniO에 있는 파일을 리스트 형태로 읽어서 반환
     def bucket_read_data(self, brd_client: boto3.client, brd_bucket_name: str) -> list:
@@ -46,10 +47,10 @@ class DataLoad():
         return file_list
 
     ###.csv파일을 데이터프레임으로 읽어서 전처리
-    def process_df(self, cd_spark: SparkSession, cd_df_name: str, cd_buck_name: str) -> DataFrame:
+    def process_df(self, cd_df_name: str, cd_buck_name: str) -> DataFrame:
 
             ### 데이터프레임을 읽어옴
-            df = cd_spark.read.csv(
+            df = self.spark.read.csv(
                 f's3a://{cd_buck_name}/{cd_df_name}'
                 ,header = True
                 ,inferSchema = True #스키마(데이터타입)를 자동으로 추론한다 False 의 경우 모든 데이터를 문자열(String)로 읽어온다
@@ -62,8 +63,8 @@ class DataLoad():
                 drop_df = df.dropna(subset = ['Confirmed'])                                 #'Confirmed'의 값이 없는 행 삭제
                 int_df = drop_df.withColumn('Confirmed', drop_df['Confirmed'].cast('int'))  #'Confirmed'값을 int형으로 타입 변환
                 sum_df = int_df.groupBy('Country_Region').sum('Confirmed')                  # 각 나라(Country_Region) 별로 group by
-                rename_df = sum_df.withColumnRenamed('Country/Region', 'Country_Region')    #'Country/Region' --> 'Country_Region' 컬럼명 수정
-                select_df = rename_df.select('Country_Region', 'sum(Confirmed)')            #'Country_Region' 와 'Confirmed' 만 가지고 새로운 데이터프레임 생성
+                modf_df = sum_df.withColumnRenamed('Country/Region', 'Country_Region')    #'Country/Region' --> 'Country_Region' 컬럼명 수정
+                select_df = modf_df.select('Country_Region', 'sum(Confirmed)')            #'Country_Region' 와 'Confirmed' 만 가지고 새로운 데이터프레임 생성
                 # select_df.show(10) # 결과 확인
 
                 return select_df
@@ -74,11 +75,11 @@ class DataLoad():
 
     ###최종 데이터프레임 생성
     def create_final_df(self, cfd_df: DataFrame, cfd_columns: list) -> DataFrame:
-        cfd_columns.insert(0, cfd_df.columns[0])                                            #날짜 형태의 리스트 첫번째에 'Country_Region' 추가
-        df_renamed = cfd_df.toDF(*cfd_columns)                                              #데이터프레임 컬럼명을 날짜 형태로 모두 변경(이후 날짜 별로 정렬하기 위해서)
-        df_sorted = df_renamed.select('Country_Region', *sorted(df_renamed.columns[1:]))    #컬럼명을 날짜 별로 정렬
+        cfd_columns.insert(0, cfd_df.columns[0])                                        #날짜 형태의 리스트 첫번째에 'Country_Region' 추가
+        rename_df = cfd_df.toDF(*cfd_columns)                                           #데이터프레임 컬럼명을 날짜 형태로 모두 변경(이후 날짜 별로 정렬하기 위해서)
+        sort_df = rename_df.select('Country_Region', *sorted(rename_df.columns[1:]))    #컬럼명을 날짜 별로 정렬
 
-        return df_sorted
+        return sort_df
 
     ###데이터프레임을 join
     def join_dataframes(self, prev_df: DataFrame, next_df: DataFrame) -> DataFrame:
@@ -97,14 +98,13 @@ class DataLoad():
         return date_form
     
     ###로컬에 데이터프레임 연도 별 .csv 로 저장
-    def save_df(self, sd_df: DataFrame) -> None:
+    def save_df(self, sd_df: DataFrame, sd_output: str) -> None:
         years_dict = {}
-        sd_output = os.path.join('..', 'output')
 
         for col in sd_df.columns[1:]:                           #최종 데이터프레임의 두 번째 컬럼부터 반복하면서 
             year = col[:4]                                      #각 컬럼의 년도를 추출
 
-            if year not in years_dict:
+            if year not in years_dict:                          #years_dict 에 추출한 년도가 없으면
                 years_dict[year] = []                           #{'2021': []}
             years_dict[year].append(col)                        #{'2021': ['2021/01/01']} 와 같이 years_dict 에 추가
 
@@ -118,9 +118,9 @@ class DataLoad():
             if columns:
                 df_year = sd_df.select(columns)
                 df_year.coalesce(1).write.mode('overwrite').option('header', 'true').csv(os.path.join(sd_output, year))
-                print(f'Year {year} data saved at {os.path.join(sd_output, year)}')
-                 
-        
+                print(f'Year {year} data saved path: {os.path.join(sd_output, year)}')
+
+
 def main():
     ul_cli = ul.MinioUpload('https://api.github.com/repos/CSSEGISandData/COVID-19/contents/csse_covid_19_data/csse_covid_19_daily_reports')
     dl_cli = DataLoad(ul_cli)
@@ -133,7 +133,7 @@ def main():
     rename_cols = []
 
     for df_name in df_list:
-        process_df = dl_cli.process_df(dl_cli.spark, df_name, ul_cli.bucket_name) #각 데이터프레임 가공
+        process_df = dl_cli.process_df(df_name, ul_cli.bucket_name) #각 데이터프레임 가공
         rename_col = dl_cli.rename_columns(df_name) #파일이름을 이용해 날짜 형태의 문자열을 얻는다
 
         result_dfs.append(process_df)
@@ -150,13 +150,11 @@ def main():
     print(f'total column count:{len(final_df.columns)}')
 
     #결과 데이터프레임을 저장
-    dl_cli.save_df(final_df)
+    dl_cli.save_df(final_df, dl_cli.output)
 
-    ###DB insert ing...
-    
-    
 
     dl_cli.spark.stop()
+
 
 if __name__ == '__main__':
     main()
